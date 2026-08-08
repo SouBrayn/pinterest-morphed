@@ -1,3 +1,9 @@
+## [1.7.0-dev.2](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.1...v1.7.0-dev.2) (2026-08-08)
+
+### ✨ New Features
+
+* **auth:** support stock Play Services via XSpoofSignatures LSPosed module ([652d65e](https://github.com/SouBryan/pinterest-morphed/commit/652d65eff4c7e3222312b321d0ab6f22d14ed47c))
+
 ## [1.7.0-dev.1](https://github.com/SouBryan/pinterest-morphed/compare/v1.6.0...v1.7.0-dev.1) (2026-07-17)
 
 ### ✨ New Features
