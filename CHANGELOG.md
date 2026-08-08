@@ -1,3 +1,9 @@
+## [1.7.0-dev.5](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.4...v1.7.0-dev.5) (2026-08-08)
+
+### 🐛 Bug Fixes
+
+* **auth:** disable Google login patch by default — unproven end-to-end ([cf31d99](https://github.com/SouBryan/pinterest-morphed/commit/cf31d996eccc79073217a4b2afcec9c020701e22))
+
 ## [1.7.0-dev.4](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.3...v1.7.0-dev.4) (2026-08-08)
 
 ### 🐛 Bug Fixes
