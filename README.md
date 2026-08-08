@@ -93,7 +93,7 @@ automatically — no need to hunt for it manually.
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.7.0-dev.1](https://github.com/SouBryan/pinterest-morphed/releases/tag/v1.7.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;14 patches total
+> **[v1.0.0-dev.7](https://github.com/SouBryan/pinterest-morphed/releases/tag/v1.0.0-dev.7)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;14 patches total
 <details open>
 <summary>📦 Pinterest&nbsp;&nbsp;•&nbsp;&nbsp;14 patches</summary>
 <br>
@@ -116,7 +116,7 @@ automatically — no need to hunt for it manually.
 | [Hide promoted pins](#hide-promoted-pins) | Neutralises every ad-indicator field on the Pinterest pin/story models (is_promoted, promoted_is_*, is_native, ad_data, ...) so Promoted Pins, shopping-carousel ads, native-content ads and click-out CTAs are never rendered or fired. |  |
 | [Opt out of Google Analytics](#opt-out-of-google-analytics) | Sets the default Google Analytics consent flags to false so the Firebase Measurement SDK does not collect analytics, ad data or personalization signals. |  |
 | [Remove Advertising ID permission](#remove-advertising-id-permission) | Strips the com.google.android.gms.permission.AD_ID permission so any residual SDK cannot read the device's Google Advertising ID. |  |
-| [Restore Google login (microG-RE)](#restore-google-login-microg-re) | Adds the microG-RE signature-spoof meta-data so "Continue with Google" works on devices that use microG-RE instead of Google Play Services. Ignored by vanilla Play Services. |  |
+| [Restore Google login (signature spoofing)](#restore-google-login-signature-spoofing) | Adds the signature-spoof metadata used by microG-RE (per-caller) and XSpoofSignatures (system-wide, via LSPosed) so "Continue with Google" works on both microG-RE and stock Google Play Services. No-op if neither is present. |  |
 | [Sanitize copied links](#sanitize-copied-links) | Resolves Pinterest short URLs (pin.it/…, pinterest.com/url_shortener/…) to their canonical pin URL before they are placed on the system clipboard, so "Copy link" no longer produces a fingerprinted short link. |  |
 | [Sanitize sharing links](#sanitize-sharing-links) | Strips UTM and click-ID tracking parameters from the URL the app puts on the Android share sheet, so friends receive clean pin links. |  |
 
@@ -180,11 +180,45 @@ source, then pick Pinterest to patch.
 Yes. All patched apps are re-signed, so Android sees them as a different app
 from the Play Store version and won't share credentials.
 
-### Google/Facebook login is broken.
-Also expected. Any auth flow that verifies the app's signing certificate on
-the *server* side (Google Sign-In, Google Drive, Meta Login, …) refuses to
-talk to a re-signed APK. Log in with email/password instead. This is a
-limitation of every patched Android app, not something specific to this repo.
+### "Continue with Google" — does it work?
+The default-enabled *"Restore Google login (signature spoofing)"* resource
+patch declares Pinterest's Play-Store certificate SHA-1
+(`b6a74dbcb894b0f73d8c485c72eb1247a8f027ca`) in two forms so it works
+against both Google-Play-Services implementations we've seen in the wild.
+
+**Path A — microG-RE.** The patch adds the
+`app.revanced.android.gms.SPOOFED_PACKAGE_SIGNATURE` meta-data. If
+[microG-RE](https://github.com/MorpheApp/MicroG-RE) is the process
+handling the sign-in intent, its `PackageSpoofUtils` reads that value
+and forwards the correct signature to Google's OAuth server on
+Pinterest's behalf. Nothing else to install.
+
+**Path B — stock Google Play Services (SYSTEM app).** MIUI/HyperOS and
+most OEM ROMs ship `com.google.android.gms` as an updated system app.
+That build wins the intent resolution over any user-installed microG
+variant and does not know about Path A's meta-data. To restore login in
+that case, the patch also declares:
+
+- `<permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE" android:protectionLevel="normal"/>` — so the permission exists on ROMs that don't ship it
+- `<uses-permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"/>` — auto-granted at install
+- `<meta-data android:name="fake-signature" android:value="…"/>` — the SHA-1 to report
+
+Then, on the device:
+
+1. Install [XSpoofSignatures](https://github.com/rushiiMachine/XSpoofSignatures/releases/latest) — an LSPosed module that reads the metadata above and rewrites the signature returned by `PackageManagerService`.
+2. Enable it in your LSPosed flavour. Both upstream LSPosed and the JingMatrix / Vector 2.0 fork work; Vector 2.0 is what most APatch / KernelSU users are on.
+3. Add **System framework** (`android`) to the module scope — that is the only scope required, the hook lives in `system_server`.
+4. Reboot, then reapply the Pinterest patch and reinstall. "Continue with Google" should now go through the normal account picker and land you on your feed.
+
+**When it still won't work.** If neither microG-RE nor XSpoofSignatures
+is present the patch is a no-op — the OAuth call keeps returning
+`invalid_client` and the app silently returns to the login screen. Log
+in with email/password in that case; there is nothing else the patched
+APK can do about server-side signature verification.
+
+Any other server-side-verified sign-in (Meta Login, Google Drive scopes
+outside standard sign-in, banking apps, …) has the same limitation and
+is not covered by this patch.
 
 ### Which APK/bundle should I download?
 See the [Supported Pinterest versions](#-supported-pinterest-versions) table
