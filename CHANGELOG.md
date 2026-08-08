@@ -1,3 +1,9 @@
+## [1.7.0-dev.4](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.3...v1.7.0-dev.4) (2026-08-08)
+
+### 🐛 Bug Fixes
+
+* **auth:** fake-signature needs the whole certificate, not its SHA-1 ([3f240f3](https://github.com/SouBryan/pinterest-morphed/commit/3f240f3d6f5d3da4b4bcc7a8a5cb89af4ab246a1))
+
 ## [1.7.0-dev.3](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.2...v1.7.0-dev.3) (2026-08-08)
 
 ### 🐛 Bug Fixes
