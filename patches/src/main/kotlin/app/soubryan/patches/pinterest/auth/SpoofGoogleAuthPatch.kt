@@ -5,9 +5,27 @@ import app.soubryan.patches.pinterest.shared.Constants.COMPATIBILITY_PINTEREST
 import org.w3c.dom.Element
 
 /**
- * Restores "Continue with Google" login on patched Pinterest by making
- * the app report Pinterest's Play-Store certificate SHA-1 to whatever
- * Google-Play-Services implementation handles the sign-in intent.
+ * Attempts to restore "Continue with Google" login on patched Pinterest
+ * by making the app report Pinterest's Play-Store certificate to
+ * whatever Google-Play-Services implementation handles the sign-in
+ * intent.
+ *
+ * **Off by default — not confirmed working end-to-end.** On the one
+ * device this was tested against (Xiaomi, MIUI 14 / Android 13, APatch +
+ * LSPosed with XSpoofSignatures enabled and scoped to `system_server`,
+ * `FAKE_PACKAGE_SIGNATURE` granted) the sign-in still failed and
+ * XSpoofSignatures never logged `Spoofing signature for com.pinterest`,
+ * meaning its `generatePackageInfo` hook never fired for the query stock
+ * Play Services makes. Whether that is MIUI's modified PackageManager
+ * defeating the hook, or Play Services reading the certificate through
+ * some other path, was not determined. Path A (microG-RE without stock
+ * Play Services installed) was never exercised at all.
+ *
+ * Enable it only if you already have a signature-spoofing setup you know
+ * works — verify with
+ * [sigspoof-checker](https://f-droid.org/packages/lanchon.sigspoof.checker/)
+ * first. The certificate values below are correct and verified; what is
+ * unproven is whether anything on a given device acts on them.
  *
  * ## The problem
  *
@@ -23,7 +41,7 @@ import org.w3c.dom.Element
  * `androidx.credentials:credentials-play-services-auth` →
  * `androidx.credentials.playservices.HiddenActivity`, which resolves
  * the `com.google.android.gms` package on the device. Two very different
- * things can be behind that name and this patch covers both of them.
+ * things can be behind that name and this patch targets both of them.
  *
  * ## Path A — microG-RE (`app.revanced.android.gms`)
  *
@@ -122,8 +140,8 @@ import org.w3c.dom.Element
 @Suppress("unused")
 val spoofGoogleAuthPatch = resourcePatch(
     name = "Restore Google login (signature spoofing)",
-    description = "Adds the signature-spoof metadata used by microG-RE (per-caller) and XSpoofSignatures (system-wide, via LSPosed) so \"Continue with Google\" works on both microG-RE and stock Google Play Services. No-op if neither is present.",
-    default = true,
+    description = "Experimental, off by default. Adds the signature-spoof metadata read by microG-RE and by the XSpoofSignatures LSPosed module, so \"Continue with Google\" may work on devices with a working signature-spoofing setup. Not confirmed working end-to-end; no-op without such a setup.",
+    default = false,
 ) {
     compatibleWith(COMPATIBILITY_PINTEREST)
 
