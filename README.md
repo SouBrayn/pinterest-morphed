@@ -200,7 +200,11 @@ variant and does not know about Path A's meta-data. To restore login in
 that case, the patch also adds:
 
 - `<uses-permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"/>` — requested from the definer below
-- `<meta-data android:name="fake-signature" android:value="…"/>` — the SHA-1 to report
+- `<meta-data android:name="fake-signature" android:value="3082024f3082…"/>` — the whole DER-encoded certificate in hex
+
+Note the two meta-data values are deliberately different shapes: microG-RE
+substitutes a SHA-1 digest, while XSpoofSignatures feeds its value straight
+into `new Signature(String)`, which parses a full X.509 certificate.
 
 Then, on the device:
 

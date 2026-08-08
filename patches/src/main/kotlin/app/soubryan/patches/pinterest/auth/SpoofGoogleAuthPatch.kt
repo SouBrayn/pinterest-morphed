@@ -58,9 +58,12 @@ import org.w3c.dom.Element
  *
  * ```
  * <uses-permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"/>
- * <meta-data android:name="fake-signature"
- *            android:value="b6a74dbcb894b0f73d8c485c72eb1247a8f027ca"/>
+ * <meta-data android:name="fake-signature" android:value="3082024f3082..."/>
  * ```
+ *
+ * The value is the whole DER-encoded certificate in hex — not the SHA-1
+ * digest Path A uses — because XSpoofSignatures feeds it straight into
+ * `new Signature(String)`.
  *
  * The permission itself is *not* declared here — XSpoofSignatures's own
  * APK (`dev.rushii.xspoofsignatures`) declares it with
@@ -103,6 +106,18 @@ import org.w3c.dom.Element
  * on the device that queries the Pinterest signature will therefore see
  * the Play-Store cert instead of the Morphe signing cert — that's the
  * whole point of this patch, and no realistic use case is harmed by it.
+ *
+ * ## Two different value formats
+ *
+ * The two consumers want the certificate in different shapes and getting
+ * this wrong fails silently:
+ *
+ * - microG-RE substitutes the result of `sha1sum(sig.toByteArray())`, so
+ *   its meta-data holds the **SHA-1 digest** (40 hex chars).
+ * - XSpoofSignatures builds `new Signature(fakeSig)`, whose `String`
+ *   constructor parses a **whole DER-encoded X.509 certificate** in hex
+ *   (1190 chars here). A digest passed here would silently produce a
+ *   20-byte garbage "certificate" that matches nothing.
  */
 @Suppress("unused")
 val spoofGoogleAuthPatch = resourcePatch(
@@ -113,14 +128,6 @@ val spoofGoogleAuthPatch = resourcePatch(
     compatibleWith(COMPATIBILITY_PINTEREST)
 
     execute {
-        // SHA-1 of Signer #1 in the official Play Store build.
-        // Verified with `apksigner verify --print-certs base.apk` on 14.27.0.
-        // The corresponding SHA-256 (already enforced as an install-time
-        // allowlist in Constants.COMPATIBILITY_PINTEREST) is
-        // 341d6881b1ecf38361fbf8c8fbae0aa516b45375c39ef5e78b161869acc1bcfa.
-        val pinterestOfficialSignatureSha1 =
-            "b6a74dbcb894b0f73d8c485c72eb1247a8f027ca"
-
         // Path A: microG-RE per-caller spoofing metadata. Key derived at
         // build time in microG-RE from `BASE_PACKAGE_NAME = "app.revanced"`.
         val microgSpoofMetaName =
@@ -145,11 +152,49 @@ val spoofGoogleAuthPatch = resourcePatch(
                 attributes = mapOf("android:name" to fakeSigPermission),
             )
 
-            upsertAppMetaData(application, microgSpoofMetaName, pinterestOfficialSignatureSha1)
-            upsertAppMetaData(application, xspoofMetaName, pinterestOfficialSignatureSha1)
+            upsertAppMetaData(application, microgSpoofMetaName, PLAY_STORE_CERTIFICATE_SHA1)
+            upsertAppMetaData(application, xspoofMetaName, PLAY_STORE_CERTIFICATE_HEX)
         }
     }
 }
+
+/**
+ * SHA-1 of the certificate the Play Store build is signed with, as
+ * reported by `apksigner verify --print-certs` on 14.27.0's base.apk.
+ */
+private const val PLAY_STORE_CERTIFICATE_SHA1 = "b6a74dbcb894b0f73d8c485c72eb1247a8f027ca"
+
+/**
+ * The same certificate, DER-encoded and hex-formatted — the shape
+ * `Signature.toCharsString()` returns and `Signature(String)` parses.
+ *
+ * Extracted from the v2 APK Signing Block of the official 14.27.0
+ * base.apk (Signer #1: CN=Carl Rice, OU=Android, O=Pinterest Inc,
+ * L=Palo Alto, ST=CA, C=US; valid 2012-04-24 → 2037-04-18). Its SHA-1
+ * is [PLAY_STORE_CERTIFICATE_SHA1] and its SHA-256 is the value already
+ * enforced as an install-time allowlist in `COMPATIBILITY_PINTEREST`,
+ * so the patcher refuses to run against an APK signed with anything
+ * else — which is what makes hardcoding this safe.
+ */
+private val PLAY_STORE_CERTIFICATE_HEX = """
+    3082024f308201b8a00302010202044f96d518300d06092a864886f70d0101050500306c
+    310b3009060355040613025553310b300906035504081302434131123010060355040713
+    0950616c6f20416c746f31163014060355040a130d50696e74657265737420496e633110
+    300e060355040b1307416e64726f696431123010060355040313094361726c2052696365
+    301e170d3132303432343136333031365a170d3337303431383136333031365a306c310b
+    3009060355040613025553310b3009060355040813024341311230100603550407130950
+    616c6f20416c746f31163014060355040a130d50696e74657265737420496e633110300e
+    060355040b1307416e64726f696431123010060355040313094361726c20526963653081
+    9f300d06092a864886f70d010101050003818d0030818902818100bd8b325a2eb8ade0e1
+    6e44971e75130ec98f2c37c8a477044382a1c5c18aa3078bede3c1a49776441617f3bb67
+    11d1a7d764785ea20bf8c694d78fdc82d575f88f340fc87b948558385636f80dba536481
+    a9c8bf03505781adbbca1ef65b2f59281ca92e352d9f685d04024c19cb3b4e3e14e6eb69
+    ca113e55b55d766ea860170203010001300d06092a864886f70d0101050500038181009e
+    6766c1071e383b75c520221b502e4701d7a110933a9fe7e7417679be71581ad24a09c42b
+    b5190acfb7e487969f843a634eac015424adc4380cdc0eb21b47616b4459f11a018b4f51
+    85bfb75764d95c1d8bd01c21932911578a3406caf8d317bc65f2d4d5caef1b59e59ed695
+    e235a672460b2ccff2d0a8f3c3b2604c599714
+""".filterNot(Char::isWhitespace)
 
 /**
  * Adds `<meta-data android:name=... android:value=...>` under
