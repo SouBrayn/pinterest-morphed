@@ -197,18 +197,25 @@ Pinterest's behalf. Nothing else to install.
 most OEM ROMs ship `com.google.android.gms` as an updated system app.
 That build wins the intent resolution over any user-installed microG
 variant and does not know about Path A's meta-data. To restore login in
-that case, the patch also declares:
+that case, the patch also adds:
 
-- `<permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE" android:protectionLevel="normal"/>` — so the permission exists on ROMs that don't ship it
-- `<uses-permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"/>` — auto-granted at install
+- `<uses-permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"/>` — requested from the definer below
 - `<meta-data android:name="fake-signature" android:value="…"/>` — the SHA-1 to report
 
 Then, on the device:
 
-1. Install [XSpoofSignatures](https://github.com/rushiiMachine/XSpoofSignatures/releases/latest) — an LSPosed module that reads the metadata above and rewrites the signature returned by `PackageManagerService`.
+1. Install [XSpoofSignatures](https://github.com/rushiiMachine/XSpoofSignatures/releases/latest) — an LSPosed module that reads the metadata above and rewrites the signature returned by `PackageManagerService`. It also **defines** the `FAKE_PACKAGE_SIGNATURE` permission its module needs — the patched Pinterest only requests it, it does not redeclare it.
 2. Enable it in your LSPosed flavour. Both upstream LSPosed and the JingMatrix / Vector 2.0 fork work; Vector 2.0 is what most APatch / KernelSU users are on.
 3. Add **System framework** (`android`) to the module scope — that is the only scope required, the hook lives in `system_server`.
-4. Reboot, then reapply the Pinterest patch and reinstall. "Continue with Google" should now go through the normal account picker and land you on your feed.
+4. Reboot, then reapply the Pinterest patch and reinstall.
+5. **Grant the permission manually** — XSpoofSignatures declares `FAKE_PACKAGE_SIGNATURE` as a `dangerous` permission, so Android will not auto-grant it. The patched Pinterest has no code that pops the runtime request dialog, so grant it once from a PC over ADB:
+
+   ```bash
+   adb shell pm grant com.pinterest android.permission.FAKE_PACKAGE_SIGNATURE
+   ```
+
+   Verify with `adb shell dumpsys package com.pinterest | grep FAKE_PACKAGE_SIGNATURE` — it should read `granted=true`. The grant survives across app updates as long as the package name stays `com.pinterest`.
+6. Open Pinterest → **Continue with Google**. The system account picker should now go all the way through and land you on your feed.
 
 **When it still won't work.** If neither microG-RE nor XSpoofSignatures
 is present the patch is a no-op — the OAuth call keeps returning

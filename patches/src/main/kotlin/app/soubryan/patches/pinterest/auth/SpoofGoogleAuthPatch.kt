@@ -57,35 +57,43 @@ import org.w3c.dom.Element
  * signature when the caller has `FAKE_PACKAGE_SIGNATURE` granted:
  *
  * ```
- * <permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"
- *             android:protectionLevel="normal"/>
  * <uses-permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"/>
  * <meta-data android:name="fake-signature"
  *            android:value="b6a74dbcb894b0f73d8c485c72eb1247a8f027ca"/>
  * ```
  *
- * The `<permission>` declaration is what makes this work on stock ROMs
- * that don't already ship the `FAKE_PACKAGE_SIGNATURE` permission — the
- * patched app becomes the definer *and* consumer of the permission, and
- * because the protection level is `normal` it is auto-granted at install
- * time. LSPosed's XSpoofSignatures then intercepts every subsequent call
- * to `getPackageInfo("com.pinterest", GET_SIGNATURES)` from the system
+ * The permission itself is *not* declared here — XSpoofSignatures's own
+ * APK (`dev.rushii.xspoofsignatures`) declares it with
+ * `protectionLevel="dangerous"`. Trying to redeclare it from the patched
+ * app fails with `INSTALL_FAILED_DUPLICATE_PERMISSION` because the
+ * permission is already owned by XSpoofSignatures.
+ *
+ * Because the permission is `dangerous`, Android does not auto-grant
+ * it at install time. The user has to grant it manually after installing
+ * the patched Pinterest, e.g. via ADB:
+ *
+ * ```
+ * adb shell pm grant com.pinterest android.permission.FAKE_PACKAGE_SIGNATURE
+ * ```
+ *
+ * LSPosed's XSpoofSignatures then intercepts every subsequent call to
+ * `getPackageInfo("com.pinterest", GET_SIGNATURES)` from the system
  * server, including the one stock Play Services makes when it validates
  * the OAuth caller, and returns Pinterest's real Play-Store SHA-1.
  *
  * Requires the user to install XSpoofSignatures inside their LSPosed
  * flavour (the JingMatrix / Vector 2.0 fork works, so does upstream
  * LSPosed) and add "System framework" (`android`) to the module scope.
- * No user-facing dialog appears — the permission is auto-granted.
  *
  * ## Why this is safe on unmodified Play Services + no LSPosed
  *
- * On a Play-certified device without XSpoofSignatures the extra
- * `<permission>` / `<uses-permission>` / `fake-signature` tags are
- * harmless: nothing hooks `generatePackageInfo`, so no signature is
- * spoofed and Play Services keeps rejecting the OAuth call — exactly
- * the same broken state as before. The microG-RE meta-data is likewise
- * a no-op there. The patch is therefore safe to leave enabled by default.
+ * On a Play-certified device without XSpoofSignatures installed, the
+ * permission `android.permission.FAKE_PACKAGE_SIGNATURE` is undefined,
+ * so `<uses-permission>` silently no-ops (the system does not fail to
+ * install unknown permissions, it just leaves them ungranted). The
+ * `fake-signature` meta-data has no reader either. Play Services keeps
+ * rejecting the OAuth call — exactly the same broken state as before.
+ * The microG-RE meta-data is likewise a no-op there. Safe to leave on.
  *
  * ## Trade-off — `fake-signature-only`
  *
@@ -128,17 +136,8 @@ val spoofGoogleAuthPatch = resourcePatch(
                 .getElementsByTagName("application")
                 .item(0) as Element
 
-            // <permission> and <uses-permission> live directly under <manifest>,
-            // not under <application> — use manifest.childNodes tag-by-name lookup.
-            upsertManifestChildTag(
-                manifest = manifest,
-                tag = "permission",
-                nameAttrValue = fakeSigPermission,
-                attributes = mapOf(
-                    "android:name" to fakeSigPermission,
-                    "android:protectionLevel" to "normal",
-                ),
-            )
+            // <uses-permission> lives directly under <manifest>, not <application>.
+            // The permission itself is defined by XSpoofSignatures' APK.
             upsertManifestChildTag(
                 manifest = manifest,
                 tag = "uses-permission",
