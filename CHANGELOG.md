@@ -1,3 +1,9 @@
+## [1.7.0-dev.3](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.2...v1.7.0-dev.3) (2026-08-08)
+
+### 🐛 Bug Fixes
+
+* **auth:** don't redeclare FAKE_PACKAGE_SIGNATURE — XSpoofSignatures owns it ([ffea710](https://github.com/SouBryan/pinterest-morphed/commit/ffea71043f1576c7117db603de01a8d2cb478fe0))
+
 ## [1.7.0-dev.2](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.1...v1.7.0-dev.2) (2026-08-08)
 
 ### ✨ New Features
