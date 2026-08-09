@@ -1,3 +1,17 @@
+## [1.7.0](https://github.com/SouBryan/pinterest-morphed/compare/v1.6.0...v1.7.0) (2026-08-09)
+
+### 🐛 Bug Fixes
+
+* **auth:** disable Google login patch by default — unproven end-to-end ([cf31d99](https://github.com/SouBryan/pinterest-morphed/commit/cf31d996eccc79073217a4b2afcec9c020701e22))
+* **auth:** don't redeclare FAKE_PACKAGE_SIGNATURE — XSpoofSignatures owns it ([ffea710](https://github.com/SouBryan/pinterest-morphed/commit/ffea71043f1576c7117db603de01a8d2cb478fe0))
+* **auth:** fake-signature needs the whole certificate, not its SHA-1 ([3f240f3](https://github.com/SouBryan/pinterest-morphed/commit/3f240f3d6f5d3da4b4bcc7a8a5cb89af4ab246a1))
+
+### ✨ New Features
+
+* **auth:** SpoofGoogleAuthPatch — restore Google Sign-In on microG-RE ([8d4fc62](https://github.com/SouBryan/pinterest-morphed/commit/8d4fc6281c68e13b22f6f949a5fcb6067e185ce2))
+* **auth:** support stock Play Services via XSpoofSignatures LSPosed module ([652d65e](https://github.com/SouBryan/pinterest-morphed/commit/652d65eff4c7e3222312b321d0ab6f22d14ed47c))
+* **compat:** extend Pinterest support to 14.28.0 - 14.30.0 ([bb7a5f0](https://github.com/SouBryan/pinterest-morphed/commit/bb7a5f045c7299d13437db84ac5a328761c3ce29)), closes [#1](https://github.com/SouBryan/pinterest-morphed/issues/1)
+
 ## [1.7.0-dev.6](https://github.com/SouBryan/pinterest-morphed/compare/v1.7.0-dev.5...v1.7.0-dev.6) (2026-08-09)
 
 ### ✨ New Features
