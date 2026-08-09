@@ -71,7 +71,10 @@ Then:
 
 | Version | Channel         | Notes                                                                    |
 | ------- | --------------- | ------------------------------------------------------------------------ |
-| 14.27.0 | Stable          | Latest release — bumps `minSdk` to Android 12L (SDK 32)                  |
+| 14.30.0 | Stable          | Latest release (2026-08-06)                                              |
+| 14.29.0 | Stable          |                                                                          |
+| 14.28.0 | Stable          |                                                                          |
+| 14.27.0 | Stable          |                                                                          |
 | 14.26.0 | Stable          |                                                                          |
 | 14.25.0 | **Recommended** | Most-tested build on real hardware (ad-blocking, sanitisers, resolver)   |
 | 14.24.0 | Stable          |                                                                          |
@@ -80,12 +83,12 @@ Then:
 | 14.21.0 | Stable          |                                                                          |
 | 14.20.0 | Stable          | Oldest supported release                                                 |
 
-Every listed version has been verified end-to-end — **all 12 patches apply
+Every listed version has been verified end-to-end — **all 13 patches apply
 cleanly on the exact `versionCode` declared in
 [`Constants.kt`](patches/src/main/kotlin/app/soubryan/patches/pinterest/shared/Constants.kt).**
 Fingerprints are anchored on Gson `@SerializedName` values, Pinterest-owned
-class names and stable Android SDK strings, so they survive every 14.2x
-release without any code change.
+class names and stable Android SDK strings, so they survive every 14.2x /
+14.3x release without any code change.
 
 Morphe Manager fetches the exact APKMirror download link for each version
 automatically — no need to hunt for it manually.
@@ -93,15 +96,15 @@ automatically — no need to hunt for it manually.
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.6.0](https://github.com/SouBryan/pinterest-morphed/releases/tag/v1.6.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;13 patches total
+> **[v1.7.0-dev.6](https://github.com/SouBryan/pinterest-morphed/releases/tag/v1.7.0-dev.6)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;14 patches total
 <details open>
-<summary>📦 Pinterest&nbsp;&nbsp;•&nbsp;&nbsp;13 patches</summary>
+<summary>📦 Pinterest&nbsp;&nbsp;•&nbsp;&nbsp;14 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 14.27.0 | 14.26.0 | 14.25.0 | 14.24.0 | 14.23.0 | 14.22.0 | 14.21.0 | 14.20.0 |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 14.30.0 | 14.29.0 | 14.28.0 | 14.27.0 | 14.26.0 | 14.25.0 | 14.24.0 | 14.23.0 | 14.22.0 | 14.21.0 | 14.20.0 |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
@@ -116,6 +119,7 @@ automatically — no need to hunt for it manually.
 | [Hide promoted pins](#hide-promoted-pins) | Neutralises every ad-indicator field on the Pinterest pin/story models (is_promoted, promoted_is_*, is_native, ad_data, ...) so Promoted Pins, shopping-carousel ads, native-content ads and click-out CTAs are never rendered or fired. |  |
 | [Opt out of Google Analytics](#opt-out-of-google-analytics) | Sets the default Google Analytics consent flags to false so the Firebase Measurement SDK does not collect analytics, ad data or personalization signals. |  |
 | [Remove Advertising ID permission](#remove-advertising-id-permission) | Strips the com.google.android.gms.permission.AD_ID permission so any residual SDK cannot read the device's Google Advertising ID. |  |
+| [Restore Google login (signature spoofing)](#restore-google-login-signature-spoofing) | Experimental, off by default. Adds the signature-spoof metadata read by microG-RE and by the XSpoofSignatures LSPosed module, so "Continue with Google" may work on devices with a working signature-spoofing setup. Not confirmed working end-to-end; no-op without such a setup. |  |
 | [Sanitize copied links](#sanitize-copied-links) | Resolves Pinterest short URLs (pin.it/…, pinterest.com/url_shortener/…) to their canonical pin URL before they are placed on the system clipboard, so "Copy link" no longer produces a fingerprinted short link. |  |
 | [Sanitize sharing links](#sanitize-sharing-links) | Strips UTM and click-ID tracking parameters from the URL the app puts on the Android share sheet, so friends receive clean pin links. |  |
 
@@ -179,11 +183,54 @@ source, then pick Pinterest to patch.
 Yes. All patched apps are re-signed, so Android sees them as a different app
 from the Play Store version and won't share credentials.
 
-### Google/Facebook login is broken.
-Also expected. Any auth flow that verifies the app's signing certificate on
-the *server* side (Google Sign-In, Google Drive, Meta Login, …) refuses to
-talk to a re-signed APK. Log in with email/password instead. This is a
-limitation of every patched Android app, not something specific to this repo.
+### "Continue with Google" — does it work?
+**Short answer: no, use email/password.**
+
+Google Sign-In verifies the app's signing certificate server-side. A
+patched APK is resigned with a different key, so the OAuth call comes
+back `invalid_client` and the app silently returns to the login screen
+after the account picker. Nothing inside the APK can change that on its
+own — the fix has to come from the system reporting a different
+certificate for `com.pinterest`.
+
+There is an **experimental, off-by-default** patch for that,
+*"Restore Google login (signature spoofing)"*. It writes Pinterest's
+Play-Store certificate into two manifest keys:
+
+| Consumer | Key | Value |
+| --- | --- | --- |
+| [microG-RE](https://github.com/MorpheApp/MicroG-RE) | `app.revanced.android.gms.SPOOFED_PACKAGE_SIGNATURE` | SHA-1 digest |
+| [XSpoofSignatures](https://github.com/rushiiMachine/XSpoofSignatures) (LSPosed) | `fake-signature` | full DER certificate in hex |
+
+plus `<uses-permission android:name="android.permission.FAKE_PACKAGE_SIGNATURE"/>`.
+The values are verified correct — the certificate reproduces both the
+SHA-1 and the SHA-256 that `COMPATIBILITY_PINTEREST` already enforces —
+but **the patch is not confirmed to actually restore login.** On the one
+device it was tried (Xiaomi, MIUI 14 / Android 13, APatch + LSPosed with
+XSpoofSignatures enabled, scoped to `system_server`, permission granted)
+sign-in still failed and the module never logged
+`Spoofing signature for com.pinterest`, so its hook never fired for the
+query stock Play Services makes.
+
+Only enable it if you already run a signature-spoofing setup you have
+verified independently — check with
+[sigspoof-checker](https://f-droid.org/packages/lanchon.sigspoof.checker/)
+first. If you get it working, please open an issue describing your setup.
+
+Notes if you do try it: XSpoofSignatures defines the
+`FAKE_PACKAGE_SIGNATURE` permission itself (the patch only requests it),
+and declares it `dangerous`, so it is not auto-granted:
+
+```bash
+adb shell pm grant com.pinterest android.permission.FAKE_PACKAGE_SIGNATURE
+```
+
+Every other server-side-verified sign-in (Meta Login, banking apps, …)
+has the same limitation and is out of scope.
+
+Any other server-side-verified sign-in (Meta Login, Google Drive scopes
+outside standard sign-in, banking apps, …) has the same limitation and
+is not covered by this patch.
 
 ### Which APK/bundle should I download?
 See the [Supported Pinterest versions](#-supported-pinterest-versions) table
@@ -194,9 +241,9 @@ your device, fall back to the **Universal APK**. Both produce identical
 patched builds. Avoid already-modded or repacked APKs from other sources.
 
 ### Will you support version X.Y.Z?
-Pinterest **14.20.0 through 14.27.0** are already verified (12/12 patches on
+Pinterest **14.20.0 through 14.30.0** are already verified (13/13 patches on
 every release in that range). If a future Pinterest release still applies all
-12 patches, it works with no code change on my side — the fingerprints are
+13 patches, it works with no code change on my side — the fingerprints are
 anchored on Gson `@SerializedName` values and Pinterest-owned class names,
 which R8 preserves. If a patch does stop applying, open an issue with your
 Pinterest version and the CLI output so I can re-anchor the fingerprint.
