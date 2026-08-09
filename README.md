@@ -71,7 +71,10 @@ Then:
 
 | Version | Channel         | Notes                                                                    |
 | ------- | --------------- | ------------------------------------------------------------------------ |
-| 14.27.0 | Stable          | Latest release — bumps `minSdk` to Android 12L (SDK 32)                  |
+| 14.30.0 | Stable          | Latest release (2026-08-06)                                              |
+| 14.29.0 | Stable          |                                                                          |
+| 14.28.0 | Stable          |                                                                          |
+| 14.27.0 | Stable          |                                                                          |
 | 14.26.0 | Stable          |                                                                          |
 | 14.25.0 | **Recommended** | Most-tested build on real hardware (ad-blocking, sanitisers, resolver)   |
 | 14.24.0 | Stable          |                                                                          |
@@ -80,12 +83,12 @@ Then:
 | 14.21.0 | Stable          |                                                                          |
 | 14.20.0 | Stable          | Oldest supported release                                                 |
 
-Every listed version has been verified end-to-end — **all 12 patches apply
+Every listed version has been verified end-to-end — **all 13 patches apply
 cleanly on the exact `versionCode` declared in
 [`Constants.kt`](patches/src/main/kotlin/app/soubryan/patches/pinterest/shared/Constants.kt).**
 Fingerprints are anchored on Gson `@SerializedName` values, Pinterest-owned
-class names and stable Android SDK strings, so they survive every 14.2x
-release without any code change.
+class names and stable Android SDK strings, so they survive every 14.2x /
+14.3x release without any code change.
 
 Morphe Manager fetches the exact APKMirror download link for each version
 automatically — no need to hunt for it manually.
@@ -100,8 +103,8 @@ automatically — no need to hunt for it manually.
 
 **🎯 Supported versions:**
 
-| 14.27.0 | 14.26.0 | 14.25.0 | 14.24.0 | 14.23.0 | 14.22.0 | 14.21.0 | 14.20.0 |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 14.30.0 | 14.29.0 | 14.28.0 | 14.27.0 | 14.26.0 | 14.25.0 | 14.24.0 | 14.23.0 | 14.22.0 | 14.21.0 | 14.20.0 |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
@@ -238,9 +241,9 @@ your device, fall back to the **Universal APK**. Both produce identical
 patched builds. Avoid already-modded or repacked APKs from other sources.
 
 ### Will you support version X.Y.Z?
-Pinterest **14.20.0 through 14.27.0** are already verified (12/12 patches on
+Pinterest **14.20.0 through 14.30.0** are already verified (13/13 patches on
 every release in that range). If a future Pinterest release still applies all
-12 patches, it works with no code change on my side — the fingerprints are
+13 patches, it works with no code change on my side — the fingerprints are
 anchored on Gson `@SerializedName` values and Pinterest-owned class names,
 which R8 preserves. If a patch does stop applying, open an issue with your
 Pinterest version and the CLI output so I can re-anchor the fingerprint.

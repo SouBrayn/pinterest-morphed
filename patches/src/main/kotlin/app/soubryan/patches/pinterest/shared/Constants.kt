@@ -13,8 +13,8 @@ internal object Constants {
      * (Morphe Manager will guide users to fetch a bundle from APKMirror or
      * export it from an installed copy with SAI / APKExport).
      *
-     * Every target from 14.20.0 through 14.27.0 has been verified end-to-end:
-     * all 12 patches apply cleanly (12/12) on the exact version code listed
+     * Every target from 14.20.0 through 14.30.0 has been verified end-to-end:
+     * all 13 patches apply cleanly (13/13) on the exact version code listed
      * below. The fingerprints are anchored on Gson `@SerializedName` values,
      * Pinterest-owned class names and stable Android SDK strings — they have
      * survived every Pinterest release in this range without any code change.
@@ -39,19 +39,31 @@ internal object Constants {
         //
         // Only the Pinterest team can produce an APK with this signature.
         // Verified with `apksigner verify --print-certs base.apk` on every
-        // release listed below (14.20.0 → 14.27.0).
+        // release listed below (14.20.0 → 14.30.0).
         signatures = setOf(
             "341d6881b1ecf38361fbf8c8fbae0aa516b45375c39ef5e78b161869acc1bcfa",
         ),
         targets = listOf(
             AppTarget(
+                version = "14.30.0",
+                versionCode = 14308020,
+                minSdk = 29,
+                description = "Latest release (2026-08-06).",
+            ),
+            AppTarget(
+                version = "14.29.0",
+                versionCode = 14298020,
+                minSdk = 29,
+            ),
+            AppTarget(
+                version = "14.28.0",
+                versionCode = 14288010,
+                minSdk = 29,
+            ),
+            AppTarget(
                 version = "14.27.0",
                 versionCode = 14278010,
-                // Pinterest 14.27 raised the manifest minSdk to 32 (Android 12L).
-                // Devices on Android 11 / 12 (SDK 30 / 31) can still patch older
-                // releases in this list.
-                minSdk = 32,
-                description = "Latest release — bumps minSdk to Android 12L (SDK 32).",
+                minSdk = 29,
             ),
             AppTarget(
                 version = "14.26.0",
